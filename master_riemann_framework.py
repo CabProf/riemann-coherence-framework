@@ -2,9 +2,9 @@
 # FIRMA PERSONAL: Para Lorenzo y Sebastián; al gran arquitecto del universo.
 # ==============================================================================
 # Proyecto: Framework de Coherencia Global Inter-Bloques para la Función Zeta
-# Módulo: Suite v9.6 Máster Absoluto (Hilos Inteligentes y Red de Sockets P2P)
+# Módulo: Suite v9.7 Máster Absoluto (Paralelismo Avanzado y Sockets P2P)
 # Director de Investigación: David Mojica (CabProf)
-# Versión: V 8.01 IdE
+# Versión: V 8.01 IdE (Edición de Producción Consolidada - Perfil Bajo Libre de Fallos)
 # ==============================================================================
 
 import numpy as np
@@ -169,10 +169,12 @@ class SuperMasterRiemannSuite:
         cursor = conn.cursor()
         try:
             cursor.execute("SELECT COUNT(*) FROM auditorias_globales")
-            total_tests = cursor.fetchone()
-            if total_tests == 0: return
+            total_tests = cursor.fetchone()[0]
+            if total_tests == 0: 
+                print("[-] La base de datos relacional está vacía.")
+                return
             cursor.execute("SELECT SUM(contradiccion_interceptada) FROM auditorias_globales")
-            total_interceptados = cursor.fetchone() or 0
+            total_interceptados = cursor.fetchone()[0] or 0
             cursor.execute("SELECT AVG(tasa_ataque), AVG(acoplamiento_sano), AVG(acoplamiento_estres) FROM auditorias_globales")
             avg_ataque, avg_sano, avg_estres = cursor.fetchone()
             print(f"\n[📊 HISTÓRICO SQLITE]: {total_tests} pruebas | Eficiencia: {(total_interceptados/total_tests)*100:.2f}% | Caída Armónica: -{(avg_sano-avg_estres)*100:.4f}%")
@@ -187,6 +189,3 @@ class SuperMasterRiemannSuite:
             _, est_c, umbral_c, _, _ = self.ejecutar_pipeline(usar_blockchain=False, num_hilos=num_hilos, bloque_ataque_id=None, tasa_ataque=tasa_aleatoria)
             _, est_a, _, contra_a, _ = self.ejecutar_pipeline(usar_blockchain=False, num_hilos=num_hilos, bloque_ataque_id=bloque_aleatorio, tasa_ataque=tasa_aleatoria)
             self.guardar_registro_sqlite(est_c, umbral_c, est_a, contra_a, tasa_aleatoria, usar_blockchain=False)
-            print(f" -> Test #{i+1}: Virus en Bloque #{bloque_aleatorio} | Gravedad: {tasa_aleatoria*100:.2f}% | Interceptado: {'🚨 SÍ' if contra_a else '❌ NO'}")
-
-    def exportar_graficos_vectoriales_puros(self, res_control, res_ataque):
