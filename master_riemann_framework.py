@@ -4,7 +4,7 @@
 # Proyecto: Framework de Coherencia Global Inter-Bloques para la Función Zeta
 # Módulo: Suite v9.6 Máster Absoluto (Hilos Inteligentes y Red de Sockets P2P)
 # Director de Investigación: David Mojica (CabProf)
-# Versión: V 8.01 IdE (Edición de Producción Consolidada - Perfil Bajo)
+# Versión: V 8.01 IdE
 # ==============================================================================
 
 import numpy as np
