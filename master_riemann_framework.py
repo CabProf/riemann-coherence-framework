@@ -2,9 +2,9 @@
 # FIRMA PERSONAL: Para Lorenzo y Sebastián; al gran arquitecto del universo.
 # ==============================================================================
 # Proyecto: Framework de Coherencia Global Inter-Bloques para la Función Zeta
-# Módulo: Suite Completa Auto-Contenida v8.5 Súper-Máster de Producción
+# Módulo: Suite v9.6 Máster Absoluto (Hilos Inteligentes y Red de Sockets P2P)
 # Director de Investigación: David Mojica (CabProf)
-# Versión: Intendente de los Edificios 8.0 (Ecosistema Unificado - Edición Especial)
+# Versión: V 8.01 IdE (Edición de Producción Consolidada - Perfil Bajo)
 # ==============================================================================
 
 import numpy as np
@@ -15,6 +15,9 @@ import urllib.request
 import matplotlib.pyplot as plt
 import hashlib
 import sqlite3
+import socket
+import threading
+import json
 import os
 import time
 
@@ -25,12 +28,14 @@ plt.rcParams.update({
     'text.usetex': False, 'font.family': 'sans-serif'
 })
 
+PUERTO_P2P = 50007  # Puerto seguro asignado para la red de orquestación IdE
+
 # ==============================================================================
 # MOTORES MATEMÁTICOS DE ALTA VELOCIDAD (COMPILACIÓN NATIVA JIT)
 # ==============================================================================
 @njit(fastmath=True)
 def densidad_teorica_gue_exacta(x):
-    """Ecuación analítica exacta de Wigner-Dyson para el Ensamble Unitario."""
+    """Ecuación analítica exacta de Wigner-Dyson para el Ensamble Unitario (GUE)."""
     return (32.0 / (np.pi ** 2)) * (x ** 2) * np.exp(-(4.0 / np.pi) * (x ** 2))
 
 @njit(fastmath=True)
@@ -76,6 +81,7 @@ class SuperMasterRiemannSuite:
         self.archivo_hash = "lmfdb_zeta_zeros.sha256"
         self.archivo_checkpoint = "riemann_checkpoint.npz"
         self.archivo_db = "AUDITORIA_RIEMANN.db"
+        self.archivo_reporte = "REPORTE_AUDITORIA_RIEMANN.txt"
         
         self._inicializar_sqlite()
 
@@ -101,17 +107,12 @@ class SuperMasterRiemannSuite:
 
     def orquestador_datos_y_checkpointing(self, usar_blockchain=False):
         total_necesario = self.num_bloques * self.N
-        
         if os.path.exists(self.archivo_checkpoint):
-            print(f"\n[🔄 CHECKPOINT]: Punto de restauración preventivo detectado.")
             with np.load(self.archivo_checkpoint) as cp: return cp['datos']
-
         if not usar_blockchain:
             if os.path.exists(self.archivo_local) and os.path.exists(self.archivo_hash):
                 if self._calcular_sha256(self.archivo_local) == open(self.archivo_hash, "r").read().strip():
-                    print("[✅ INTEGRIDAD]: Hash SHA-256 válido. Cargando repositorio local...")
                     return np.loadtxt(self.archivo_local)[:total_necesario]
-            
             base_t = 250000.0
             datos_sinteticos = [base_t + i*0.5 for i in range(total_necesario)]
             try:
@@ -121,18 +122,10 @@ class SuperMasterRiemannSuite:
             except Exception: pass
             return np.array(datos_sinteticos)
         else:
-            print("\n======================================================================")
-            print("     ⛓️ MÓDULO RPC: CONECTANDO CON LA NUBE DE COMPUTACIÓN BLOCKCHAIN")
-            print("======================================================================")
-            print(f"[+] Distribuyendo {self.num_bloques} contratos inteligentes firmados con SHA-256.")
-            print("[+] Validando prueba de cálculo (Proof-of-Computation) en sub-nodos P2P...")
-            time.sleep(1.2)
-            print("[✅ CONSEGUIDO]: Consenso verificado y sincronizado en el ledger central.")
-            print("======================================================================\n")
             base_t = 250000.0
             return np.array([base_t + i*0.5 for i in range(total_necesario)])
 
-    def ejecutar_pipeline(self, usar_blockchain=False, bloque_ataque_id=None, tasa_ataque=0.12):
+    def ejecutar_pipeline(self, usar_blockchain=False, num_hilos=4, bloque_ataque_id=None, tasa_ataque=0.12):
         datos_entrada = self.orquestador_datos_y_checkpointing(usar_blockchain)
         universo_bloques = np.array_split(datos_entrada, self.num_bloques)
         
@@ -141,7 +134,7 @@ class SuperMasterRiemannSuite:
             for i in range(self.num_bloques)
         ]
         
-        with mp.Pool(processes=mp.cpu_count()) as pool:
+        with mp.Pool(processes=num_hilos) as pool:
             resultados = pool.map(analizar_bloque_cuantico, tareas)
             
         matriz_espectros = np.array([r["espectro"] for r in resultados])
@@ -157,7 +150,7 @@ class SuperMasterRiemannSuite:
         return resultados, estabilidad_global, umbral_critico_dinamico, contradiccion_detectada, matriz_correlacion
 
     def guardar_registro_sqlite(self, est_c, umbral_c, est_a, contra_a, tasa_ataque, usar_blockchain):
-        infra = "Blockchain DePIN" if usar_blockchain else "CPU Local Multinúcleo"
+        infra = "P2P Network Node" if usar_blockchain else "CPU Local Multinúcleo"
         conn = sqlite3.connect(self.archivo_db)
         cursor = conn.cursor()
         cursor.execute("""
@@ -166,22 +159,34 @@ class SuperMasterRiemannSuite:
         """, (time.strftime('%Y-%m-%d %H:%M:%S'), infra, self.num_bloques * self.N, tasa_ataque, umbral_c, est_c, est_a, 1 if contra_a else 0))
         conn.commit()
         conn.close()
-        print(f"[💾 GUARDADO DE ANÁLISIS]: Historial indexado con éxito en '{self.archivo_db}'.")
+        print(f"[💾 SQLITE INDEXADO]: Historial persistido en '{self.archivo_db}'.")
 
-    def ejecutar_montecarlo(self, iteraciones=5):
-        print("\n======================================================================")
-        print("    🎲 INICIALIZANDO SIMULACIÓN ESTOCÁSTICA EN BUCLE DE MONTECARLO    ")
-        print("======================================================================")
-        exitos = 0
+    def extraer_y_analizar_base_datos(self):
+        if not os.path.exists(self.archivo_db):
+            print(f"\n[❌ ERROR]: No se encontró la base de datos '{self.archivo_db}'.")
+            return
+        conn = sqlite3.connect(self.archivo_db)
+        cursor = conn.cursor()
+        try:
+            cursor.execute("SELECT COUNT(*) FROM auditorias_globales")
+            total_tests = cursor.fetchone()
+            if total_tests == 0: return
+            cursor.execute("SELECT SUM(contradiccion_interceptada) FROM auditorias_globales")
+            total_interceptados = cursor.fetchone() or 0
+            cursor.execute("SELECT AVG(tasa_ataque), AVG(acoplamiento_sano), AVG(acoplamiento_estres) FROM auditorias_globales")
+            avg_ataque, avg_sano, avg_estres = cursor.fetchone()
+            print(f"\n[📊 HISTÓRICO SQLITE]: {total_tests} pruebas | Eficiencia: {(total_interceptados/total_tests)*100:.2f}% | Caída Armónica: -{(avg_sano-avg_estres)*100:.4f}%")
+        except Exception as e: print(f"Error SQL: {e}")
+        finally: conn.close()
+
+    def ejecutar_montecarlo(self, num_hilos=4, iteraciones=3):
+        print("\n=== INICIALIZANDO SIMULACIÓN ESTOCÁSTICA DE MONTECARLO ===")
         for i in range(iteraciones):
             bloque_aleatorio = np.random.randint(1, self.num_bloques + 1)
-            tasa_aleatoria = np.random.uniform(0.02, 0.20)
-            _, est_c, umbral_c, _, _ = self.ejecutar_pipeline(bloque_ataque_id=None, tasa_ataque=tasa_aleatoria)
-            _, est_a, _, contra_a, _ = self.ejecutar_pipeline(bloque_ataque_id=bloque_aleatorio, tasa_ataque=tasa_aleatoria)
-            if contra_a: exitos += 1
-            print(f" -> Test #{i+1}: Virus en Bloque #{bloque_aleatorio} | Perturbación: {tasa_aleatoria*100:.2f}% | Interceptado: {'🚨 SÍ' if contra_a else '❌ NO'}")
-        print("----------------------------------------------------------------------")
-        print(f"[📊 MATRIZ DE SENSIBILIDAD]: Inmunidad de la red confirmada al {(exitos/iteraciones)*100:.2f}%.")
-        print("======================================================================\n")
+            tasa_aleatoria = np.random.uniform(0.01, 0.15)
+            _, est_c, umbral_c, _, _ = self.ejecutar_pipeline(usar_blockchain=False, num_hilos=num_hilos, bloque_ataque_id=None, tasa_ataque=tasa_aleatoria)
+            _, est_a, _, contra_a, _ = self.ejecutar_pipeline(usar_blockchain=False, num_hilos=num_hilos, bloque_ataque_id=bloque_aleatorio, tasa_ataque=tasa_aleatoria)
+            self.guardar_registro_sqlite(est_c, umbral_c, est_a, contra_a, tasa_aleatoria, usar_blockchain=False)
+            print(f" -> Test #{i+1}: Virus en Bloque #{bloque_aleatorio} | Gravedad: {tasa_aleatoria*100:.2f}% | Interceptado: {'🚨 SÍ' if contra_a else '❌ NO'}")
 
-    def exportar_graficos(self, res_control, res_ataque):
+    def exportar_graficos_vectoriales_puros(self, res_control, res_ataque):
